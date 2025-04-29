@@ -1,0 +1,39 @@
+demo:
+  useSecureRestTemplate: true
+# Referencing a secret from KV with a custom fallback value
+app:
+  my.secret: ${test-secret}
+  my.certificate: ${test-certificate}
+  my.apim.subscriptionkey: ${APIM_COLORS_SUBSCRIPTION_KEY}
+  my.apim.debugtoken: ${APIM_DEBUG_TOKEN}
+  my.apim.colors.url: ${APIM_COLORS_URL}
+  my.kevault.uri: ${AZURE_KEYVAULT_URL}
+spring:
+  application:
+    name: keyvault-demo
+  ssl:
+    bundle:
+      keyvault:
+        tlsClientBundle:
+          key:
+            alias: self-signed-cert
+          for-client-auth: true
+          keystore:
+            keyvault-ref: red-scus-javafuncdemo-kv
+          truststore:
+            keyvault-ref: red-scus-javafuncdemo-kv
+  cloud:
+    azure:
+      keyvault:
+        jca:
+          vaults:
+            red-scus-javafuncdemo-kv:
+              endpoint: ${AZURE_KEYVAULT_URL}
+              profile:
+                tenant-id: ${AZURE_TENANT_ID}
+              credential:
+                client-id: ${AZURE_CLIENT_ID}
+                client-secret: ${AZURE_CLIENT_SECRET}
+logging:
+  level:
+    com.azure.security.keyvault.jca.KeyVaultKeyStore: debug
