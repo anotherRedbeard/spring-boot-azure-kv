@@ -9,14 +9,16 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
 import org.springframework.web.client.RestTemplate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 public class HttpClientConfig {
 
-    @Value("${app.my.apim.subscriptionkey}")
+    @Value("${app.my.api.subscriptionkey}") // Renamed from apim
     private String subscriptionKey;
 
-    @Value("${app.my.apim.debugtoken}")
+    @Value("${app.my.api.debugtoken}") // Renamed from apim
     private String debugToken;
 
     private ClientHttpRequestInterceptor subscriptionKeyInterceptor() {
@@ -26,7 +28,14 @@ public class HttpClientConfig {
             return execution.execute(request, body);
         };
     }
-    
+
+    // Helper method to combine interceptors
+    private List<ClientHttpRequestInterceptor> createInterceptors() {
+        List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
+        interceptors.add(subscriptionKeyInterceptor());
+        return interceptors;
+    }
+
     // When demo.useSecureRestTemplate is true (or absent), build the secure RestTemplate
     @Bean
     @ConditionalOnProperty(name = "demo.useSecureRestTemplate", havingValue = "true", matchIfMissing = true)
@@ -38,7 +47,7 @@ public class HttpClientConfig {
 
         return restTemplateBuilder
                 .sslBundle(sslBundle)
-                .additionalInterceptors(subscriptionKeyInterceptor())
+                .interceptors(createInterceptors()) // Use helper method
                 .build();
     }
 
@@ -47,7 +56,7 @@ public class HttpClientConfig {
     @ConditionalOnProperty(name = "demo.useSecureRestTemplate", havingValue = "false")
     public RestTemplate plainRestTemplate(RestTemplateBuilder restTemplateBuilder) {
         return restTemplateBuilder
-            .additionalInterceptors(subscriptionKeyInterceptor())
+            .interceptors(createInterceptors()) // Use helper method
             .build();
     }
 }

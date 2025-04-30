@@ -4,9 +4,9 @@ demo:
 app:
   my.secret: ${test-secret}
   my.certificate: ${test-certificate}
-  my.apim.subscriptionkey: ${APIM_COLORS_SUBSCRIPTION_KEY}
-  my.apim.debugtoken: ${APIM_DEBUG_TOKEN}
-  my.apim.colors.url: ${APIM_COLORS_URL}
+  my.api.subscriptionkey: ${API_SUBSCRIPTION_KEY} # Renamed from apim
+  my.api.debugtoken: ${API_DEBUG_TOKEN} # Renamed from apim
+  my.api.endpoint.url: ${API_ENDPOINT_URL} # Renamed from apim.colors.url
   my.kevault.uri: ${AZURE_KEYVAULT_URL}
 spring:
   application:
@@ -37,3 +37,5 @@ spring:
 logging:
   level:
     com.azure.security.keyvault.jca.KeyVaultKeyStore: debug
+    org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
+    com.example.keyvaultdemo.CertProxyController: DEBUG

@@ -6,17 +6,21 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger; // Import Logger
+import org.slf4j.LoggerFactory; // Import LoggerFactory
 
 @RestController
 public class CertProxyController {
 
+    private static final Logger log = LoggerFactory.getLogger(CertProxyController.class); // Add logger
+
     private final RestTemplate restTemplate;
 
-    @Value("${app.my.apim.colors.url}")
-    private String apimColorsUrl;
+    @Value("${app.my.api.endpoint.url}")
+    private String apiEndpointUrl; // Renamed field
 
-    @Value("${app.my.apim.debugtoken}")
-    private String debugToken;
+    @Value("${app.my.api.debugtoken}") 
+    private String debugToken; // Kept field name, value source changed
 
     public CertProxyController(RestTemplate restTemplate) {
        this.restTemplate = restTemplate;
@@ -24,9 +28,14 @@ public class CertProxyController {
 
     @GetMapping("/call-secure-endpoint")
     public ResponseEntity<String> callSecureService() {
-        String targetUrl = apimColorsUrl + "/random";
+        String targetUrl = apiEndpointUrl; // Use renamed field
+        log.info("Calling secure endpoint: {}", targetUrl); // Log the target URL
+        ResponseEntity<String> response;
+
         // use exchange to capture raw response
-        ResponseEntity<String> response = restTemplate.exchange(targetUrl, HttpMethod.GET, null, String.class);
+        response = restTemplate.exchange(targetUrl, HttpMethod.GET, null, String.class);
+        log.info("Received response status: {}", response.getStatusCode()); // Log the response status
+        log.debug("Received response body: {}", response.getBody()); // Log the response body at DEBUG level
         // return status, headers and body exactly as received
         return ResponseEntity
             .status(response.getStatusCode())
