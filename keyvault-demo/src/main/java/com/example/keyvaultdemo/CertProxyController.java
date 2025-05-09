@@ -42,7 +42,13 @@ public class CertProxyController {
     public String debugInjectedSecret() {
         try {
             // Use SecretClient to fetch the secret and use the injected secret value
-            return "Resolved secret from SecretClient: " + secretClient.getSecret("test-secret").getValue() + " and injected secret: " + injectedSecret;
+            // SECURITY WARNING: This method is for demonstration purposes only.
+            // Exposing secrets in API responses is a security risk.
+            // In a real application, you would use the injected secret value internally
+            // and never return it directly to the caller.
+            return "[DEMO ONLY] Resolved secret from SecretClient: " + secretClient.getSecret("test-secret").getValue() + 
+                   " and injected secret: " + injectedSecret + 
+                   " (WARNING: Never expose secrets in production APIs)";
         } catch (Exception e) {
             return "Failed to resolve secret from Spring Environment: " + e.getMessage();
         }
@@ -52,7 +58,13 @@ public class CertProxyController {
     public String debugInjectedCertificate() {
         try {
             // Use SecretClient to fetch the certificate and use the injected certificate value
-            return "Injected certificate value: " + secretClient.getSecret("test-certificate").getValue() + " and injected certificate: " + injectedCertificate;
+            // SECURITY WARNING: This method is for demonstration purposes only.
+            // Exposing certificates in API responses is a security risk.
+            // In a real application, you would use the certificate internally
+            // and never return it directly to the caller.
+            return "[DEMO ONLY] Injected certificate value: " + secretClient.getSecret("test-certificate").getValue() + 
+                   " and injected certificate: " + injectedCertificate +
+                   " (WARNING: Never expose certificates in production APIs)";
         } catch (Exception e) {
             return "Failed to fetch injected certificate: " + e.getMessage();
         }
