@@ -62,6 +62,12 @@
 		</dependency>
 
 		<dependency>
+            <groupId>com.azure.spring</groupId>
+            <artifactId>spring-cloud-azure-starter-keyvault-secrets</artifactId>
+            <version>5.22.0</version>
+        </dependency>
+		
+		<dependency>
 			<groupId>com.azure.spring</groupId>
 			<artifactId>spring-cloud-azure-starter-keyvault-jca</artifactId>
 			<version>5.22.0</version>

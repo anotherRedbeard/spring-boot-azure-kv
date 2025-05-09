@@ -217,6 +217,7 @@ set_local_env() {
     export API_SUBSCRIPTION_KEY="$API_SUBSCRIPTION_KEY"
     export API_ENDPOINT_URL="$API_ENDPOINT_URL"
     export API_DEBUG_TOKEN="$API_DEBUG_TOKEN"
+    export KEYVAULT_NAME="$KEYVAULT_NAME"
     echo "Run 'source ./deploy.sh set-local-env' to apply these in your current shell."
     echo "--- Local Environment Variables Set ---"
 }
@@ -287,7 +288,6 @@ case "$1" in
         ;;
     *)
         usage
-        exit 1
         ;;
 esac
 

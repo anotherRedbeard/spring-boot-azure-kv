@@ -3,6 +3,9 @@ package com.example.keyvaultdemo;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+
+import com.azure.security.keyvault.secrets.SecretClient;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -17,13 +20,42 @@ public class CertProxyController {
     private final RestTemplate restTemplate;
 
     @Value("${app.my.api.endpoint.url}")
-    private String apiEndpointUrl; // Renamed field
+    private String apiEndpointUrl;
 
     @Value("${app.my.api.debugtoken}") 
-    private String debugToken; // Kept field name, value source changed
+    private String debugToken;
 
-    public CertProxyController(RestTemplate restTemplate) {
-       this.restTemplate = restTemplate;
+    @Value("${app.my.secret}")
+    private String injectedSecret;
+
+    @Value("${app.my.certificate}")
+    private String injectedCertificate;
+
+    private final SecretClient secretClient;
+
+    public CertProxyController(RestTemplate restTemplate, SecretClient secretClient) {
+        this.secretClient = secretClient;
+        this.restTemplate = restTemplate;
+    }
+
+    @GetMapping("/debug-injected-secret")
+    public String debugInjectedSecret() {
+        try {
+            // Use SecretClient to fetch the secret and use the injected secret value
+            return "Resolved secret from SecretClient: " + secretClient.getSecret("test-secret").getValue() + " and injected secret: " + injectedSecret;
+        } catch (Exception e) {
+            return "Failed to resolve secret from Spring Environment: " + e.getMessage();
+        }
+    }
+
+    @GetMapping("/debug-injected-certificate")
+    public String debugInjectedCertificate() {
+        try {
+            // Use SecretClient to fetch the certificate and use the injected certificate value
+            return "Injected certificate value: " + secretClient.getSecret("test-certificate").getValue() + " and injected certificate: " + injectedCertificate;
+        } catch (Exception e) {
+            return "Failed to fetch injected certificate: " + e.getMessage();
+        }
     }
 
     @GetMapping("/call-secure-endpoint")

@@ -1,13 +1,3 @@
-demo:
-  useSecureRestTemplate: true
-# Referencing a secret from KV with a custom fallback value
-app:
-  my.secret: ${test-secret}
-  my.certificate: ${test-certificate}
-  my.api.subscriptionkey: ${API_SUBSCRIPTION_KEY} # Renamed from apim
-  my.api.debugtoken: ${API_DEBUG_TOKEN} # Renamed from apim
-  my.api.endpoint.url: ${API_ENDPOINT_URL} # Renamed from apim.colors.url
-  my.kevault.uri: ${AZURE_KEYVAULT_URL}
 spring:
   application:
     name: keyvault-demo
@@ -19,12 +9,20 @@ spring:
             alias: self-signed-cert
           for-client-auth: true
           keystore:
-            keyvault-ref: red-scus-javafuncdemo-kv
+            keyvault-ref: ${KEYVAULT_NAME}
           truststore:
-            keyvault-ref: red-scus-javafuncdemo-kv
+            keyvault-ref: ${KEYVAULT_NAME}
   cloud:
     azure:
       keyvault:
+        secret:
+          # The following properties are used to configure the Key Vault secret store so you can use SecretClient
+          property-source-enabled: true
+          endpoint: ${AZURE_KEYVAULT_URL}
+          # The following properties are used to configure the Key Vault secret store to be injected into the Spring Environment
+          property-sources:
+            - name: key-vault-1
+              endpoint: ${AZURE_KEYVAULT_URL}
         jca:
           vaults:
             red-scus-javafuncdemo-kv:
@@ -34,8 +32,30 @@ spring:
               credential:
                 client-id: ${AZURE_CLIENT_ID}
                 client-secret: ${AZURE_CLIENT_SECRET}
+
 logging:
   level:
     com.azure.security.keyvault.jca.KeyVaultKeyStore: debug
     org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
     com.example.keyvaultdemo.CertProxyController: DEBUG
+    com.azure.identity: TRACE
+    com.azure.core: TRACE
+    com.azure.security.keyvault.secrets: TRACE
+    org.springframework.boot.context.config: TRACE
+    org.springframework.core.env.PropertySourcesPropertyResolver: TRACE
+    org.springframework.boot.context.properties: TRACE
+
+demo:
+  useSecureRestTemplate: true
+
+app:
+  my:
+    secret: ${test-secret:default-secret}  # Remove default value to force Key Vault lookup
+    certificate: ${test-certificate:default-certificate}
+    api:
+      subscriptionkey: ${API_SUBSCRIPTION_KEY}
+      debugtoken: ${API_DEBUG_TOKEN}
+      endpoint:
+        url: ${API_ENDPOINT_URL}
+    keyvault:
+      uri: ${AZURE_KEYVAULT_URL}
