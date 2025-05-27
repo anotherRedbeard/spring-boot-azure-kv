@@ -9,6 +9,8 @@ import com.azure.security.keyvault.secrets.SecretClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.slf4j.Logger; // Import Logger
 import org.slf4j.LoggerFactory; // Import LoggerFactory
 
@@ -74,16 +76,28 @@ public class CertProxyController {
     public ResponseEntity<String> callSecureService() {
         String targetUrl = apiEndpointUrl; // Use renamed field
         log.info("Calling secure endpoint: {}", targetUrl); // Log the target URL
-        ResponseEntity<String> response;
-
-        // use exchange to capture raw response
-        response = restTemplate.exchange(targetUrl, HttpMethod.GET, null, String.class);
-        log.info("Received response status: {}", response.getStatusCode()); // Log the response status
-        log.debug("Received response body: {}", response.getBody()); // Log the response body at DEBUG level
-        // return status, headers and body exactly as received
-        return ResponseEntity
-            .status(response.getStatusCode())
-            .headers(response.getHeaders())
-            .body(response.getBody());
+        
+        try {
+            // use exchange to capture raw response
+            ResponseEntity<String> response = restTemplate.exchange(targetUrl, HttpMethod.GET, null, String.class);
+            log.info("Received response status: {}", response.getStatusCode()); // Log the response status
+            log.debug("Received response body: {}", response.getBody()); // Log the response body at DEBUG level
+            log.debug("Received response headers: {}", response.getHeaders()); // Log the response body at DEBUG level
+            
+            // Create a new response with just the essential parts to avoid proxy issues in Azure Container Apps
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            // Return just the body with a simple content-type header
+            return ResponseEntity
+                .status(response.getStatusCode())
+                .headers(headers)
+                //.headers(response.getHeaders())
+                .body(response.getBody());
+                
+        } catch (Exception e) {
+            log.error("Error calling secure endpoint: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
+        }
     }
 }
