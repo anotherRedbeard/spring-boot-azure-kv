@@ -8,7 +8,7 @@ AZURE_TENANT_ID="<YOUR_TENANT_ID>"
 AZURE_CLIENT_ID="<YOUR_CLIENT_ID>"
 AZURE_CLIENT_SECRET="<YOUR_CLIENT_SECRET>" # Consider using environment variables or other secure methods
 
-# API Details (replace APIM)
+# API Details
 API_SUBSCRIPTION_KEY="<YOUR_API_SUBSCRIPTION_KEY>" # Consider using environment variables
 API_ENDPOINT_URL="<YOUR_API_ENDPOINT_URL>" # e.g., https://your-api-instance.azure-api.net/colors/colors
 API_DEBUG_TOKEN="<YOUR_API_DEBUG_TOKEN_IF_NEEDED>" # Optional: For API tracing
@@ -78,10 +78,6 @@ deploy_infra() {
         --logs '[{"category": "ContainerRegistryLoginEvents", "enabled": true}, {"category": "ContainerRegistryRepositoryEvents", "enabled": true}]' \
         >/dev/null # Suppress verbose output
 
-    # Build and Push Initial Image (using placeholder or actual app)
-    echo "Building and pushing initial/placeholder image..."
-    package_app # Assumes Dockerfile exists and builds
-
     # Create Azure Container App Environment
     echo "Creating Azure Container App Environment '$CONTAINER_APP_NAME-env'..."
     az containerapp env create \
@@ -91,16 +87,15 @@ deploy_infra() {
         --logs-workspace-id $LOG_ANALYTICS_WORKSPACE_ID \
         --enable-workload-profiles false # Use Consumption-only profile
 
-    # Create Container App with System-Assigned Managed Identity
-    echo "Creating Azure Container App '$CONTAINER_APP_NAME' with system-assigned managed identity..."
+    # Create Container App with System-Assigned Managed Identity with placholder image
+    echo "Creating Azure Container App '$CONTAINER_APP_NAME' with 'hello-world' placeholder and system-assigned managed identity..."
     az containerapp create \
         --name $CONTAINER_APP_NAME \
         --resource-group $RESOURCE_GROUP \
         --environment $CONTAINER_APP_NAME-env \
         --ingress external \
-        --target-port 8080 \
-        --image "$PLACEHOLDER_IMAGE" \ # Use the pushed image
-        --registry-server "$ACR_NAME.azurecr.io" \
+        --target-port 80 \
+        --image $PLACEHOLDER_IMAGE \
         --system-assigned
 
     # Get the Managed Identity Principal ID
@@ -112,7 +107,7 @@ deploy_infra() {
 
     if [ -z "$MANAGED_IDENTITY_PRINCIPAL_ID" ]; then
         echo "Error: Could not retrieve Managed Identity Principal ID for Container App."
-        exit 1
+        return 0 2>/dev/null || true
     fi
     echo "Managed Identity Principal ID: $MANAGED_IDENTITY_PRINCIPAL_ID"
 
@@ -145,13 +140,15 @@ deploy_infra() {
     echo "Role assignments completed."
 
     echo "--- Infrastructure Deployment Finished ---"
-    # Note: deploy_app is not called here automatically, run separately if needed after infra.
 }
 
 # Function to build and push app image to ACR
 package_app() {
     echo "--- Packaging Application ---"
     # Ensure you are logged into Azure CLI
+
+    # Build the Java application JAR
+    build_java_application
 
     # Login to ACR using Azure CLI credentials
     echo "Logging in to Azure Container Registry '$ACR_NAME'..."
@@ -176,7 +173,11 @@ package_app() {
 deploy_app() {
     echo "--- Deploying Application Update ---"
     # Ensure the image has been pushed via package_app first
+    
+    # Get ACR server URL
+    ACR_SERVER="$ACR_NAME.azurecr.io"
 
+    # Update the container app image and environment variables
     # NOTE: The Spring Cloud Azure Starter Key Vault JCA currently only supports client credentials so we can't use
     # managed identity yet, which is why they are passed as env vars.
     echo "Updating Azure Container App '$CONTAINER_APP_NAME'..."
@@ -190,9 +191,17 @@ deploy_app() {
                        AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET \
                        API_SUBSCRIPTION_KEY=$API_SUBSCRIPTION_KEY \
                        API_ENDPOINT_URL=$API_ENDPOINT_URL \
-                       API_DEBUG_TOKEN="$API_DEBUG_TOKEN"
+                       API_DEBUG_TOKEN="$API_DEBUG_TOKEN" \
+                       KEYVAULT_NAME="$KEYVAULT_NAME" \
 
-    # Optional: Show Container App FQDN
+    echo "Updating ingress settings to allow public access..."
+    # Update ingress settings to allow public access
+    az containerapp ingress update \
+        --name $CONTAINER_APP_NAME \
+        --resource-group $RESOURCE_GROUP \
+        --target-port 8080 \
+
+     # Optional: Show Container App FQDN
     APP_FQDN=$(az containerapp show --name $CONTAINER_APP_NAME --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
     echo "Application deployed. Access at: https://$APP_FQDN"
     echo "--- Application Deployment Finished ---"
@@ -222,11 +231,7 @@ set_local_env() {
     echo "--- Local Environment Variables Set ---"
 }
 
-# Function to build and run the application locally in a Docker container
-run_local_container() {
-    echo "--- Running Local Container ---"
-    # Ensure local environment variables are set (e.g., by sourcing set_local_env)
-
+build_java_application() {
     # Build the Java application JAR
     echo "Building Java app (mvn clean package)..."
     if [ -f "./mvnw" ]; then
@@ -235,12 +240,20 @@ run_local_container() {
         mvn clean package -DskipTests
     else
         echo "Error: Maven wrapper (mvnw) or mvn command not found. Cannot build JAR."
-        exit 1
+        return 0 2>/dev/null || true
     fi
+}
+# Function to build and run the application locally in a Docker container
+run_local_container() {
+    echo "--- Running Local Container ---"
+    # Ensure local environment variables are set (e.g., by sourcing set-local-env)
+
+    # Build the Java application JAR
+    build_java_application
 
     # Build Docker image locally
     echo "Building Docker image '$IMAGE_TAG_NAME:latest'..."
-    docker build -t $IMAGE_TAG_NAME:latest .
+    docker build --platform linux/amd64 -t $IMAGE_TAG_NAME:latest .
 
     # Run Docker container with local environment variables
     echo "Running Docker container '$IMAGE_TAG_NAME:latest'..."
@@ -252,6 +265,7 @@ run_local_container() {
             -e API_SUBSCRIPTION_KEY="$API_SUBSCRIPTION_KEY" \
             -e API_ENDPOINT_URL="$API_ENDPOINT_URL" \
             -e API_DEBUG_TOKEN="$API_DEBUG_TOKEN" \
+            -e KEYVAULT_NAME="$KEYVAULT_NAME" \
             $IMAGE_TAG_NAME:latest
     echo "--- Local Container Execution Finished ---"
 }
@@ -260,14 +274,13 @@ run_local_container() {
 
 if [ -z "$1" ]; then
     usage
-    exit 1
-fi
+    fi
 
 case "$1" in
     all)
         echo "Deploying Infrastructure AND Application..."
         deploy_infra
-        # deploy_app is called within deploy_infra in this version, review if separate step needed
+        deploy_app
         echo "Deployment 'all' finished."
         ;;
     infra)

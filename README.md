@@ -55,6 +55,7 @@ This application intentionally contains endpoints that expose secrets and certif
   - `API_ENDPOINT_URL`
   - `API_DEBUG_TOKEN`
   - `API_SUBSCRIPTION_KEY`
+  - `KEYVAULT_NAME`
 
 ## Running Locally
 
@@ -63,11 +64,21 @@ This application intentionally contains endpoints that expose secrets and certif
 3. Build the application: `mvn clean package`
 4. Run: `java -jar target/keyvault-demo-0.0.1-SNAPSHOT.jar`
 
+## Running Locally with Docker
+
+1. Ensure Docker is running
+2. Run the `deploy.sh` script with the `run-local-container` switch. This will build the jar and build and run the docker container
+
+   ```bash
+   ./deploy.sh run-local-container
+   ```
+
 ## Deployment
 
 ### Current Deployment Method
 
 The application currently deploys to Azure Container Apps using the `deploy.sh` script, which:
+
 - Builds the application into a container
 - Pushes to Azure Container Registry
 - Deploys to Azure Container Apps with appropriate environment variables
@@ -75,6 +86,7 @@ The application currently deploys to Azure Container Apps using the `deploy.sh` 
 ### Future Deployment Pipeline
 
 We're working on implementing a GitHub Actions deployment pipeline using Bicep for infrastructure as code, which will:
+
 - Automate the build and deployment process
 - Provision and configure all necessary Azure resources
 - Set up proper service connections and managed identities
